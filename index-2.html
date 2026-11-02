@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marché Unique</title>
+<style>
+:root{--bg:#EDF0F5;--sf:#fff;--ink:#14213D;--mu:#5B6578;--ln:#D5DAE4;--ac:#E8590C;--on:#fff;color-scheme:light dark}
+@media(prefers-color-scheme:dark){:root{--bg:#0F1524;--sf:#18203A;--ink:#EEF1F8;--mu:#9AA5BD;--ln:#2A3454;--ac:#FF8A4C;--on:#14213D}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.45}
+.wrap{max-width:980px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+h1{font-size:1.6rem;font-weight:800;margin:0;flex:1}
+h2{font-size:1.1rem;margin:0 0 4px}
+button{font:inherit;cursor:pointer;border:1px solid var(--ln);background:var(--sf);color:var(--ink);border-radius:10px;padding:8px 14px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+.pri,.tabs button[aria-pressed=true],.chips button[aria-pressed=true]{background:var(--ac);color:var(--on);border-color:var(--ac);font-weight:600}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+input,select{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--ink)}
+input[type=checkbox],input[type=radio]{width:auto}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 0}
+.chips button{white-space:nowrap;border-radius:99px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.tile{height:100px;display:grid;place-items:center;font-size:3rem;background:color-mix(in srgb,var(--c) 20%,var(--sf))}
+.body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
+.shop{font-size:.8rem;color:var(--mu);display:flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.price{font-weight:800;margin-top:auto}
+.empty{color:var(--mu);padding:24px 0;text-align:center}
+.panel{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:14px;margin-bottom:12px}
+.f label{display:block;margin:8px 0 4px;font-weight:600}
+.f label.in{display:flex;gap:8px;align-items:center;font-weight:400}
+.f button{margin-top:10px}
+.msg{margin-top:8px;font-weight:600;color:var(--ac)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0}
+.grp{border-top:1px solid var(--ln);padding-top:8px;margin-top:8px}
+#drawer{position:fixed;inset:0 0 0 auto;width:min(380px,100%);background:var(--sf);border-left:1px solid var(--ln);padding:16px;transform:translateX(100%);transition:transform .2s;overflow-y:auto;z-index:20}
+#drawer.open{transform:none}
+@media(prefers-reduced-motion:reduce){#drawer{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Marché Unique</h1><button id="cartBtn" class="pri">Panier (<span id="count">0</span>)</button></header>
+  <div class="tabs"><button id="tBuy" aria-pressed="true">Acheter</button><button id="tSell" aria-pressed="false">Je suis vendeur</button></div>
+
+  <section id="buy">
+    <input type="search" id="q" placeholder="Téléphone, robe, casserole…" aria-label="Rechercher un produit">
+    <div class="chips" id="chips"></div>
+    <div class="grid" id="grid"><p class="empty">Chargement…</p></div>
+  </section>
+
+  <section id="sell" hidden>
+    <div class="panel f">
+      <label for="cle">Clé d’accès (affichée dans le terminal au lancement du serveur)</label>
+      <input type="password" id="cle" autocomplete="off">
+      <label for="shopSel">Ma boutique</label><select id="shopSel"></select>
+    </div>
+    <div class="panel f">
+      <h2>Ouvrir une boutique</h2>
+      <label for="rName">Nom de la boutique</label><input id="rName">
+      <label for="rOwner">Nom du responsable</label><input id="rOwner">
+      <label for="rTel">Téléphone</label><input id="rTel" type="tel" inputmode="tel">
+      <label for="rCat">Catégorie principale</label><select id="rCat" class="cats"></select>
+      <label class="in"><input type="checkbox" id="rShare" checked> Partager mes clients avec les autres boutiques</label>
+      <button class="pri" id="rBtn">Créer ma boutique</button><div class="msg" id="rMsg" role="status"></div>
+    </div>
+    <div class="panel f">
+      <h2>Ajouter un produit à ma boutique</h2>
+      <label for="pName">Nom du produit</label><input id="pName">
+      <label for="pCat">Catégorie</label><select id="pCat" class="cats"></select>
+      <label for="pPrice">Prix (FCFA)</label><input id="pPrice" type="number" min="1" inputmode="numeric">
+      <label for="pStock">Stock disponible</label><input id="pStock" type="number" min="0" inputmode="numeric">
+      <button class="pri" id="pBtn">Ajouter le produit</button><div class="msg" id="pMsg" role="status"></div>
+    </div>
+    <div class="panel f">
+      <h2>Envoyer un client à une autre boutique</h2>
+      <label for="gName">Nom du client</label><input id="gName">
+      <label for="gTel">Téléphone du client</label><input id="gTel" type="tel" inputmode="tel">
+      <label for="gWant">Ce qu’il cherche</label><input id="gWant">
+      <label for="gTo">Boutique qui le reçoit</label><select id="gTo"></select>
+      <button class="pri" id="gBtn">Envoyer le client</button><div class="msg" id="gMsg" role="status"></div>
+    </div>
+    <div class="panel f">
+      <h2>Mes données</h2>
+      <button id="bLeads">Clients reçus</button> <button id="bRev">Mes reversements</button>
+      <div id="lists" role="status"></div>
+      <label for="cRef">Confirmer un paiement (test, sans agrégateur)</label><input id="cRef" placeholder="MU-XXXXXXXX">
+      <button id="cBtn">Confirmer le paiement</button><div class="msg" id="cMsg" role="status"></div>
+    </div>
+  </section>
+</div>
+<aside id="drawer" aria-label="Panier">
+  <div class="row"><h2>Votre panier</h2><button id="closeCart">Fermer</button></div>
+  <div id="cartBody"></div>
+</aside>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>n.toLocaleString("fr-FR")+" FCFA";
+const COL=["#2563EB","#C026D3","#059669","#D97706","#0EA5E9","#DC2626","#7C3AED","#0D9488"];
+const col=id=>COL[id%COL.length];
+const EMO={"Téléphones":"📱","Mode":"👕","Maison":"🏠","Beauté":"💄"};
+const CATS=["Téléphones","Mode","Maison","Beauté"];
+const METHODS=[["t_money","T-Money"],["flooz","Flooz"],["carte","Carte bancaire"],["livraison","Paiement à la livraison"]];
+let P=[],B=[],cat="Tous",cart={};
+
+async function api(m,u,b,k){
+  const r=await fetch(u,{method:m,headers:{"Content-Type":"application/json",...(k?{"X-Cle":k}:{})},body:b?JSON.stringify(b):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.erreur||"Erreur du serveur.");
+  return j;
+}
+const erreur=e=>e.message==="Failed to fetch"?"Serveur injoignable. Lancez python3 serveur.py.":e.message;
+const run=async(m,f)=>{try{$(m).textContent=await f()}catch(e){$(m).textContent=erreur(e)}};
+
+async function charger(){
+  try{[P,B]=await Promise.all([api("GET","/api/produits"),api("GET","/api/boutiques")])}
+  catch(e){$("grid").innerHTML=`<p class="empty">${esc(erreur(e))}</p>`;return}
+  drawChips();drawGrid();drawShops();drawCart();
+}
+function drawChips(){
+  const cs=["Tous",...new Set(P.map(p=>p.categorie))];
+  $("chips").innerHTML=cs.map(c=>`<button data-cat="${esc(c)}" aria-pressed="${c===cat}">${esc(c)}</button>`).join("");
+}
+function drawGrid(){
+  const q=$("q").value.trim().toLowerCase();
+  const l=P.filter(p=>(cat==="Tous"||p.categorie===cat)&&(!q||(p.nom+p.boutique).toLowerCase().includes(q)));
+  $("grid").innerHTML=l.length?l.map(p=>`<article class="card" style="--c:${col(p.boutique_id)}"><div class="tile" aria-hidden="true">${EMO[p.categorie]||"🛍️"}</div><div class="body"><span class="shop"><i class="dot"></i>${esc(p.boutique)}</span><strong>${esc(p.nom)}</strong><span class="price">${fmt(p.prix_fcfa)}</span><button data-add="${p.id}">Ajouter au panier</button></div></article>`).join(""):`<p class="empty">Aucun produit trouvé. Essayez un autre mot ou une autre catégorie.</p>`;
+}
+function drawShops(){
+  const cur=$("shopSel").value;
+  const opts=B.map(b=>`<option value="${b.id}">${esc(b.nom)}</option>`).join("");
+  $("shopSel").innerHTML=opts;$("gTo").innerHTML=opts;
+  if(cur)$("shopSel").value=cur;
+}
+function drawCart(){
+  const ids=Object.keys(cart).map(Number).filter(i=>P.some(p=>p.id===i));
+  $("count").textContent=ids.reduce((a,i)=>a+cart[i],0);
+  if(!ids.length){$("cartBody").innerHTML=`<p class="empty">Votre panier est vide. Ajoutez un produit pour commencer.</p>`;return}
+  const by={};let total=0;
+  ids.forEach(i=>{const p=P.find(x=>x.id===i);(by[p.boutique_id]=by[p.boutique_id]||[]).push(p);total+=p.prix_fcfa*cart[i]});
+  let h="";
+  for(const s in by){
+    h+=`<div class="grp" style="--c:${col(+s)}"><span class="shop"><i class="dot"></i>${esc(by[s][0].boutique)}</span>`;
+    by[s].forEach(p=>h+=`<div class="row"><span>${esc(p.nom)} × ${cart[p.id]}</span><button data-rm="${p.id}" aria-label="Retirer ${esc(p.nom)}">−</button></div>`);
+    h+=`</div>`;
+  }
+  const have=new Set(ids.map(i=>P.find(p=>p.id===i).categorie));
+  const sug=P.filter(p=>!have.has(p.categorie)).slice(0,3);
+  h+=`<div class="row grp"><strong>Total</strong><strong>${fmt(total)}</strong></div><button class="pri" id="order" style="width:100%">Commander</button>`;
+  if(sug.length)h+=`<div class="grp"><strong>Besoin d’autre chose ?</strong>${sug.map(p=>`<div class="row"><span>${esc(p.nom)}<br><small>${esc(p.boutique)} · ${fmt(p.prix_fcfa)}</small></span><button data-add="${p.id}">Ajouter</button></div>`).join("")}</div>`;
+  $("cartBody").innerHTML=h;
+}
+function showPay(){
+  $("cartBody").innerHTML=`<div class="f"><label for="cName">Votre nom</label><input id="cName"><label for="cTel">Votre téléphone</label><input id="cTel" type="tel" inputmode="tel">${METHODS.map((m,k)=>`<label class="in"><input type="radio" name="pm" value="${m[0]}" ${k?"":"checked"}> ${m[1]}</label>`).join("")}<button class="pri" id="payBtn" style="width:100%">Valider la commande</button><button id="backCart" style="width:100%">Retour au panier</button><div class="msg" id="payMsg" role="alert"></div></div>`;
+}
+async function pay(){
+  const lignes=Object.keys(cart).map(i=>({produit_id:+i,quantite:cart[i]}));
+  try{
+    const r=await api("POST","/api/commandes",{client:$("cName").value,telephone:$("cTel").value,moyen:document.querySelector("input[name=pm]:checked").value,lignes});
+    cart={};
+    $("cartBody").innerHTML=`<p class="msg" role="status">Commande n° ${r.commande_id} enregistrée : ${fmt(r.total_fcfa)}.</p><p>Référence de paiement : <strong>${esc(r.reference)}</strong></p><p><small>Le paiement sera confirmé par l’opérateur (T-Money, Flooz…). Gardez cette référence.</small></p>`;
+    $("count").textContent=0;charger();
+  }catch(e){$("payMsg").textContent=erreur(e)}
+}
+const bid=()=>+$("shopSel").value;
+const cleV=()=>$("cle").value;
+
+document.addEventListener("click",e=>{
+  const t=e.target,a=t.closest("[data-add]"),r=t.closest("[data-rm]"),c=t.closest("[data-cat]");
+  if(c){cat=c.dataset.cat;drawChips();drawGrid()}
+  if(a){const p=P.find(x=>x.id==a.dataset.add);if((cart[p.id]||0)<p.stock)cart[p.id]=(cart[p.id]||0)+1;drawCart();if(a.closest("#grid"))$("drawer").classList.add("open")}
+  if(r){const i=+r.dataset.rm;if(--cart[i]<=0)delete cart[i];drawCart()}
+  if(t.id==="order")showPay();
+  if(t.id==="payBtn")pay();
+  if(t.id==="backCart")drawCart();
+});
+$("q").oninput=drawGrid;
+$("cartBtn").onclick=()=>$("drawer").classList.add("open");
+$("closeCart").onclick=()=>$("drawer").classList.remove("open");
+function tab(s){$("buy").hidden=s;$("sell").hidden=!s;$("tBuy").setAttribute("aria-pressed",!s);$("tSell").setAttribute("aria-pressed",s)}
+$("tBuy").onclick=()=>tab(false);$("tSell").onclick=()=>tab(true);
+document.querySelectorAll(".cats").forEach(s=>s.innerHTML=CATS.map(c=>`<option>${c}</option>`).join(""));
+
+$("rBtn").onclick=()=>run("rMsg",async()=>{
+  const r=await api("POST","/api/boutiques",{nom:$("rName").value,responsable:$("rOwner").value,telephone:$("rTel").value,categorie:$("rCat").value,partage_clients:$("rShare").checked});
+  await charger();$("shopSel").value=r.id;
+  ["rName","rOwner","rTel"].forEach(i=>$(i).value="");
+  return "Boutique créée. Vous pouvez maintenant ajouter vos produits.";
+});
+$("pBtn").onclick=()=>run("pMsg",async()=>{
+  await api("POST","/api/produits",{boutique_id:bid(),nom:$("pName").value,categorie:$("pCat").value,prix_fcfa:+$("pPrice").value,stock:+$("pStock").value},cleV());
+  await charger();["pName","pPrice","pStock"].forEach(i=>$(i).value="");
+  return "Produit ajouté. Il apparaît dans l’onglet Acheter.";
+});
+$("gBtn").onclick=()=>run("gMsg",async()=>{
+  await api("POST","/api/recommandations",{boutique_source_id:bid(),boutique_cible_id:+$("gTo").value,client:$("gName").value,telephone:$("gTel").value,produit_recherche:$("gWant").value});
+  ["gName","gTel","gWant"].forEach(i=>$(i).value="");
+  return "Client envoyé. Si la vente se conclut, vous recevrez la commission.";
+});
+$("bLeads").onclick=async()=>{
+  try{const l=await api("GET",`/api/boutiques/${bid()}/recommandations`,null,cleV());
+    $("lists").innerHTML=l.length?l.map(x=>`<div class="row"><span><strong>${esc(x.client)}</strong> · ${esc(x.telephone)}<br>Cherche : ${esc(x.produit_recherche)}<br><small>Envoyé par ${esc(x.envoye_par)} · ${esc(x.statut)}</small></span></div>`).join(""):`<p class="empty">Aucun client reçu pour le moment.</p>`}
+  catch(e){$("lists").textContent=erreur(e)}
+};
+$("bRev").onclick=async()=>{
+  try{const l=await api("GET",`/api/boutiques/${bid()}/reversements`,null,cleV());
+    $("lists").innerHTML=l.length?l.map(x=>`<div class="row"><span>Commande n° ${x.commande_id}<br><small>Ventes ${fmt(x.montant_brut)} − commission ${fmt(x.commission_fcfa)}</small></span><strong>${fmt(x.montant_net)}</strong></div>`).join(""):`<p class="empty">Aucun reversement pour le moment.</p>`}
+  catch(e){$("lists").textContent=erreur(e)}
+};
+$("cBtn").onclick=()=>run("cMsg",async()=>{
+  await api("POST","/api/paiements/confirmation",{reference:$("cRef").value.trim()},cleV());
+  await charger();$("cRef").value="";
+  return "Paiement confirmé. Le stock et les reversements sont à jour.";
+});
+charger();
+</script>
+</body>
+</html>
